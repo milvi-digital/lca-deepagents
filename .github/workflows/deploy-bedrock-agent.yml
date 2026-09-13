@@ -67,7 +67,7 @@ jobs:
           import sys
           from pathlib import Path
 
-          root = Path.cwd().resolve()
+          python_root = Path(os.environ["GITHUB_WORKSPACE"]).resolve() / "python"
           raw_script_path = os.environ["SCRIPT_PATH"].strip()
 
           if not raw_script_path:
@@ -93,10 +93,10 @@ jobs:
               )
               raise SystemExit(1)
 
-          script_path = (root / requested_path).resolve()
+          script_path = (python_root / requested_path).resolve()
 
           try:
-              relative_script_path = script_path.relative_to(root)
+              relative_script_path = script_path.relative_to(python_root)
           except ValueError:
               print(
                   "SCRIPT_PATH must stay within the python/ directory; "
