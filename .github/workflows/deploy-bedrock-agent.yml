@@ -22,7 +22,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy-bedrock-agent-${{ github.ref }}
+  group: deploy-bedrock-agent-${{ github.ref }}-${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework.py' }}
   cancel-in-progress: true
 
 jobs:

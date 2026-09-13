@@ -50,7 +50,7 @@ def _init_bedrock_model(model_env_var: str, fallback_model_id: str):
 #   LCA_MODEL_PROVIDER=bedrock
 #   AWS_REGION=...
 #   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
-if os.getenv("LCA_MODEL_PROVIDER") == "bedrock":
+if os.getenv("LCA_MODEL_PROVIDER", "").lower() == "bedrock":
     model = _init_bedrock_model(
         "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
     )
