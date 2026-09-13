@@ -4,7 +4,7 @@ name: Deploy Bedrock Agent
   workflow_dispatch:
     inputs:
       script_path:
-        description: "Path to the agent script relative to python/"
+        description: "Path to a .py agent script relative to python/"
         required: false
         default: "m1/m1.5_homework.py"
         type: string
@@ -65,6 +65,13 @@ jobs:
             echo "Repository variable AWS_ROLE_TO_ASSUME must be set before this workflow can assume an AWS role." >&2
             exit 1
           fi
+          case "$SCRIPT_PATH" in
+            *.py) ;;
+            *)
+              echo "SCRIPT_PATH must be a filesystem path to a .py file under python/, not a module name." >&2
+              exit 1
+              ;;
+          esac
           if [ ! -f "$SCRIPT_PATH" ]; then
             echo "Agent script not found at python/$SCRIPT_PATH" >&2
             exit 1
