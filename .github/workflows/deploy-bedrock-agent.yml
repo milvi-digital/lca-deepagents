@@ -24,7 +24,7 @@ jobs:
       run:
         working-directory: python
     env:
-      AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || 'us-east-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || 'us-east-2' }}
       AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
       BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-haiku-20241022-v1:0' }}
       BEDROCK_STRONG_MODEL_ID: ${{ vars.BEDROCK_STRONG_MODEL_ID || vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
