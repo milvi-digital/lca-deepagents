@@ -49,10 +49,11 @@ def _init_bedrock_model(model_env_var: str, fallback_model_id: str):
 # To switch the whole repo to AWS Bedrock without editing lesson files, set:
 #   LCA_MODEL_PROVIDER=bedrock
 #   AWS_REGION=...
-#   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+#   BEDROCK_MODEL_ID=anthropic.claude-3-5-haiku-20241022-v1:0
+#   BEDROCK_STRONG_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
 if os.getenv("LCA_MODEL_PROVIDER", "").lower() == "bedrock":
     model = _init_bedrock_model(
-        "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
     )
     strong_model = _init_bedrock_model(
         "BEDROCK_STRONG_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
@@ -117,7 +118,7 @@ else:
 #
 # from langchain_aws import ChatBedrockConverse
 # model = ChatBedrockConverse(
-#     model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
+#     model_id="anthropic.claude-3-5-haiku-20241022-v1:0",
 #     region_name=os.environ["AWS_REGION"],
 # )
 

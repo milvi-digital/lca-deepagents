@@ -19,4 +19,4 @@ Configure these repository settings before using it:
 - **Optional variables:** `AWS_REGION`, `BEDROCK_MODEL_ID`, `BEDROCK_STRONG_MODEL_ID`, `BEDROCK_AGENT_SCRIPT`
 - **Optional secret:** `LANGSMITH_API_KEY`
 
-Updating repository variables or secrets does not trigger the workflow by itself; after changing them, run `Deploy Bedrock Agent` with `workflow_dispatch` (or push a matching code change).
+Run `Deploy Bedrock Agent` with `workflow_dispatch` after updating repository variables or secrets.
