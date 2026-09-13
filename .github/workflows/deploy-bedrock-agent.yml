@@ -58,6 +58,10 @@ jobs:
             echo "Repository variable AWS_ROLE_TO_ASSUME must be set before this workflow can assume an AWS role." >&2
             exit 1
           fi
+          if ! [[ "$AWS_ROLE_TO_ASSUME" =~ ^arn:(aws|aws-us-gov|aws-cn):iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$ ]]; then
+            echo "Repository variable AWS_ROLE_TO_ASSUME must be a valid IAM role ARN (format: arn:aws:iam::<12-digit-account-id>:role/<role-name-or-path>). Got: $AWS_ROLE_TO_ASSUME" >&2
+            exit 1
+          fi
           python - <<'PY'
           import os
           import sys
