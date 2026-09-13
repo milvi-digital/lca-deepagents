@@ -11,7 +11,8 @@ Course materials for the [Deep Agents](https://academy.langchain.com/courses/fou
 ## GitHub Actions Bedrock deployment
 
 The `Deploy Bedrock Agent` workflow runs a Python lesson agent under `python/` against AWS Bedrock.
-`BEDROCK_AGENT_SCRIPT` (or the manual `script_path` input) must be a filesystem path to a `.py` file relative to `python/`.
+By default it runs `m1/m1.5_homework_filled.py`.
+`BEDROCK_AGENT_SCRIPT` (or the manual `script_path` input) must point to an existing `.py` file under `python/`; both `m1/m1.5_homework_filled.py` and `python/m1/m1.5_homework_filled.py` are accepted.
 
 Configure these repository settings before using it:
 

@@ -4,9 +4,9 @@ name: Deploy Bedrock Agent
   workflow_dispatch:
     inputs:
       script_path:
-        description: "Path to a .py agent script relative to python/"
+        description: "Path to a .py agent script under python/ (with or without a leading python/)"
         required: false
-        default: "m1/m1.5_homework.py"
+        default: "m1/m1.5_homework_filled.py"
         type: string
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy-bedrock-agent-${{ github.ref }}-${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework.py' }}
+  group: deploy-bedrock-agent-${{ github.ref }}-${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework_filled.py' }}
   cancel-in-progress: false
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
       LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT || 'lca-deepagents' }}
       LANGSMITH_TRACING: ${{ vars.LANGSMITH_TRACING || 'false' }}
       PYTHONPATH: ${{ github.workspace }}/python
-      SCRIPT_PATH: ${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework.py' }}
+      SCRIPT_PATH: ${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework_filled.py' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -68,11 +68,35 @@ jobs:
           from pathlib import Path
 
           root = Path.cwd().resolve()
-          raw_script_path = os.environ["SCRIPT_PATH"]
-          script_path = (root / raw_script_path).resolve()
+          raw_script_path = os.environ["SCRIPT_PATH"].strip()
+
+          if not raw_script_path:
+              print("SCRIPT_PATH must not be empty.", file=sys.stderr)
+              raise SystemExit(1)
+
+          requested_path = Path(raw_script_path)
+          if requested_path.is_absolute():
+              print(
+                  "SCRIPT_PATH must be a relative path under python/, "
+                  f"got absolute path {raw_script_path!r}.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          if requested_path.parts[:1] == ("python",):
+              requested_path = Path(*requested_path.parts[1:])
+
+          if not requested_path.parts:
+              print(
+                  "SCRIPT_PATH must point to a .py file under python/.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          script_path = (root / requested_path).resolve()
 
           try:
-              script_path.relative_to(root)
+              relative_script_path = script_path.relative_to(root)
           except ValueError:
               print(
                   "SCRIPT_PATH must stay within the python/ directory; "
@@ -91,12 +115,15 @@ jobs:
 
           if not script_path.is_file():
               print(
-                  f"Agent script not found at {script_path.relative_to(root)}",
+                  f"Agent script not found at {relative_script_path}",
                   file=sys.stderr,
               )
               raise SystemExit(1)
 
-          print(f"Validated script path: {script_path.relative_to(root)}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as github_env:
+              github_env.write(f"SCRIPT_PATH={relative_script_path.as_posix()}\n")
+
+          print(f"Validated script path: {relative_script_path}")
           PY
 
       - name: Configure AWS credentials
