@@ -1,0 +1,70 @@
+name: Deploy Bedrock Agent
+
+"on":
+  workflow_dispatch:
+    inputs:
+      script_path:
+        description: "Path to the agent script relative to python/"
+        required: false
+        default: "m1/m1.5_homework.py"
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-bedrock-agent.yml"
+      - "python/m1/**"
+      - "python/models.py"
+      - "python/pyproject.toml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-bedrock-agent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || 'us-east-1' }}
+      BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
+      BEDROCK_STRONG_MODEL_ID: ${{ vars.BEDROCK_STRONG_MODEL_ID || vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
+      LCA_MODEL_PROVIDER: bedrock
+      LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+      LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT || 'lca-deepagents' }}
+      LANGSMITH_TRACING: ${{ vars.LANGSMITH_TRACING || 'false' }}
+      SCRIPT_PATH: ${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework.py' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: uv sync --extra bedrock
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify agent script path
+        run: test -f "$SCRIPT_PATH"
+
+      - name: Run deepagent against Bedrock
+        run: uv run python "$SCRIPT_PATH"

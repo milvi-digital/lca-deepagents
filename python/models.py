@@ -25,7 +25,7 @@ To swap providers:
   4. Set the provider's env vars in `.env` (see notes inline).
 """
 
-import os  # noqa: F401  # used in commented-out model examples below
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -34,13 +34,34 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env", override=True)
 
 from langchain.chat_models import init_chat_model
 
+
+def _init_bedrock_model(model_env_var: str, fallback_model_id: str):
+    from langchain_aws import ChatBedrockConverse
+
+    region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+    model_id = os.getenv(model_env_var) or os.getenv("BEDROCK_MODEL_ID") or fallback_model_id
+    return ChatBedrockConverse(model_id=model_id, region_name=region_name)
+
 # ═══ Default Models ══════════════════════════════════════════════════════════
 # Workshop default: Anthropic claude-haiku-4-5, fast and cost-effective.
-# Requires ANTHROPIC_API_KEY in .env
-model = init_chat_model("anthropic:claude-haiku-4-5", timeout=60, max_retries=2)
+# Requires ANTHROPIC_API_KEY in .env.
+#
+# To switch the whole repo to AWS Bedrock without editing lesson files, set:
+#   LCA_MODEL_PROVIDER=bedrock
+#   AWS_REGION=...
+#   BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+if os.getenv("LCA_MODEL_PROVIDER") == "bedrock":
+    model = _init_bedrock_model(
+        "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    )
+    strong_model = _init_bedrock_model(
+        "BEDROCK_STRONG_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    )
+else:
+    model = init_chat_model("anthropic:claude-haiku-4-5", timeout=60, max_retries=2)
 
-#A more capable model for steps that need stronger reasoning
-strong_model = init_chat_model("anthropic:claude-sonnet-4-6", timeout=120, max_retries=2)
+    # A more capable model for steps that need stronger reasoning
+    strong_model = init_chat_model("anthropic:claude-sonnet-4-6", timeout=120, max_retries=2)
 
 # ═══ Alternative Models (comment out default above, uncomment one below) ═════
 # model = init_chat_model("anthropic:claude-sonnet-4-6")
@@ -91,11 +112,14 @@ strong_model = init_chat_model("anthropic:claude-sonnet-4-6", timeout=120, max_r
 
 # ─── AWS Bedrock ──────────────────────────────────────────────────────────────
 # Install first:  uv sync --extra bedrock
-# Requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY in .env
-# Set your region directly below (it isn't read from .env)
+# Requires standard AWS SDK credentials (env vars, shared config, or OIDC in CI)
+# and AWS_REGION / AWS_DEFAULT_REGION.
 #
 # from langchain_aws import ChatBedrockConverse
-# model = ChatBedrockConverse(model_id="anthropic.claude-sonnet-4-6", region_name="us-east-1")
+# model = ChatBedrockConverse(
+#     model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
+#     region_name=os.environ["AWS_REGION"],
+# )
 
 
 # ─── Google Gemini ────────────────────────────────────────────────────────────
