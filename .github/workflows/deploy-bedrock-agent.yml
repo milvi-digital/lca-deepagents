@@ -33,6 +33,7 @@ jobs:
         working-directory: python
     env:
       AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || 'us-east-1' }}
+      AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
       BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
       BEDROCK_STRONG_MODEL_ID: ${{ vars.BEDROCK_STRONG_MODEL_ID || vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
       LCA_MODEL_PROVIDER: bedrock
@@ -57,14 +58,23 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --extra bedrock
 
+      - name: Validate workflow configuration
+        run: |
+          echo "Resolved SCRIPT_PATH=$SCRIPT_PATH"
+          if [ -z "$AWS_ROLE_TO_ASSUME" ]; then
+            echo "Repository variable AWS_ROLE_TO_ASSUME must be set before this workflow can assume an AWS role." >&2
+            exit 1
+          fi
+          if [ ! -f "$SCRIPT_PATH" ]; then
+            echo "Agent script not found at python/$SCRIPT_PATH" >&2
+            exit 1
+          fi
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Verify agent script path
-        run: test -f "$SCRIPT_PATH"
 
       - name: Run deepagent against Bedrock
         run: uv run python "$SCRIPT_PATH"
