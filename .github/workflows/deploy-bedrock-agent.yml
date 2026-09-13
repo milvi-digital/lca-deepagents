@@ -40,6 +40,7 @@ jobs:
       LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
       LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT || 'lca-deepagents' }}
       LANGSMITH_TRACING: ${{ vars.LANGSMITH_TRACING || 'false' }}
+      PYTHONPATH: ${{ github.workspace }}/python
       SCRIPT_PATH: ${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework.py' }}
     steps:
       - name: Check out repository
