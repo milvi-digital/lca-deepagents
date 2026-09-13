@@ -65,17 +65,42 @@ jobs:
             echo "Repository variable AWS_ROLE_TO_ASSUME must be set before this workflow can assume an AWS role." >&2
             exit 1
           fi
-          case "$SCRIPT_PATH" in
-            *.py) ;;
-            *)
-              echo "SCRIPT_PATH must be a filesystem path to a .py file under python/, not a module name." >&2
-              exit 1
-              ;;
-          esac
-          if [ ! -f "$SCRIPT_PATH" ]; then
-            echo "Agent script not found at python/$SCRIPT_PATH" >&2
-            exit 1
-          fi
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+          raw_script_path = os.environ["SCRIPT_PATH"]
+          script_path = (root / raw_script_path).resolve()
+
+          try:
+              script_path.relative_to(root)
+          except ValueError:
+              print(
+                  "SCRIPT_PATH must stay within the python/ directory; "
+                  f"got {raw_script_path!r}.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          if script_path.suffix != ".py":
+              print(
+                  "SCRIPT_PATH must be a filesystem path to a .py file under python/, "
+                  "not a module name.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          if not script_path.is_file():
+              print(
+                  f"Agent script not found at {script_path.relative_to(root)}",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          print(f"Validated script path: {script_path.relative_to(root)}")
+          PY
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
