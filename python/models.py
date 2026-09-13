@@ -35,11 +35,16 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env", override=True)
 from langchain.chat_models import init_chat_model
 
 
-def _init_bedrock_model(model_env_var: str, fallback_model_id: str):
+def _init_bedrock_model(
+    model_env_var: str, fallback_model_id: str, *, use_default_model_id: bool = True
+):
     from langchain_aws import ChatBedrockConverse
 
     region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
-    model_id = os.getenv(model_env_var) or os.getenv("BEDROCK_MODEL_ID") or fallback_model_id
+    model_id = os.getenv(model_env_var)
+    if not model_id and use_default_model_id:
+        model_id = os.getenv("BEDROCK_MODEL_ID")
+    model_id = model_id or fallback_model_id
     return ChatBedrockConverse(model_id=model_id, region_name=region_name)
 
 # ═══ Default Models ══════════════════════════════════════════════════════════
@@ -56,7 +61,9 @@ if os.getenv("LCA_MODEL_PROVIDER", "").lower() == "bedrock":
         "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
     )
     strong_model = _init_bedrock_model(
-        "BEDROCK_STRONG_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        "BEDROCK_STRONG_MODEL_ID",
+        "anthropic.claude-3-5-sonnet-20240620-v1:0",
+        use_default_model_id=False,
     )
 else:
     model = init_chat_model("anthropic:claude-haiku-4-5", timeout=60, max_retries=2)
