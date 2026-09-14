@@ -51,12 +51,19 @@ def _init_bedrock_model(
 # Workshop default: Anthropic claude-haiku-4-5, fast and cost-effective.
 # Requires ANTHROPIC_API_KEY in .env.
 #
+# To switch the whole repo to OpenAI without editing lesson files, set:
+#   LCA_MODEL_PROVIDER=openai
+#   OPENAI_MODEL_ID=gpt-5.5
+#   OPENAI_STRONG_MODEL_ID=gpt-5.5
+#
 # To switch the whole repo to AWS Bedrock without editing lesson files, set:
 #   LCA_MODEL_PROVIDER=bedrock
 #   AWS_REGION=...
 #   BEDROCK_MODEL_ID=anthropic.claude-3-5-haiku-20241022-v1:0
 #   BEDROCK_STRONG_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
-if os.getenv("LCA_MODEL_PROVIDER", "").lower() == "bedrock":
+provider = os.getenv("LCA_MODEL_PROVIDER", "").lower()
+
+if provider == "bedrock":
     model = _init_bedrock_model(
         "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
     )
@@ -64,6 +71,13 @@ if os.getenv("LCA_MODEL_PROVIDER", "").lower() == "bedrock":
         "BEDROCK_STRONG_MODEL_ID",
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         use_default_model_id=False,
+    )
+elif provider == "openai":
+    openai_model_id = os.getenv("OPENAI_MODEL_ID", "gpt-5.5")
+    openai_strong_model_id = os.getenv("OPENAI_STRONG_MODEL_ID", openai_model_id)
+    model = init_chat_model(f"openai:{openai_model_id}", timeout=60, max_retries=2)
+    strong_model = init_chat_model(
+        f"openai:{openai_strong_model_id}", timeout=120, max_retries=2
     )
 else:
     model = init_chat_model("anthropic:claude-haiku-4-5", timeout=60, max_retries=2)

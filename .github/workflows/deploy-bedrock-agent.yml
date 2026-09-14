@@ -26,9 +26,12 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || 'us-east-2' }}
       AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
+      LCA_MODEL_PROVIDER: ${{ vars.LCA_MODEL_PROVIDER || 'openai' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL_ID: ${{ vars.OPENAI_MODEL_ID || 'gpt-5.5' }}
+      OPENAI_STRONG_MODEL_ID: ${{ vars.OPENAI_STRONG_MODEL_ID || vars.OPENAI_MODEL_ID || 'gpt-5.5' }}
       BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-haiku-20241022-v1:0' }}
       BEDROCK_STRONG_MODEL_ID: ${{ vars.BEDROCK_STRONG_MODEL_ID || vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
-      LCA_MODEL_PROVIDER: bedrock
       LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
       LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT || 'lca-deepagents' }}
       LANGSMITH_TRACING: ${{ vars.LANGSMITH_TRACING || 'false' }}
@@ -36,31 +39,45 @@ jobs:
       SCRIPT_PATH: ${{ github.event.inputs.script_path || vars.BEDROCK_AGENT_SCRIPT || 'm1/m1.5_homework_filled.py' }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
-
-      - name: Install Python dependencies
-        run: uv sync --extra bedrock
-
       - name: Validate workflow configuration
         run: |
+          MODEL_PROVIDER="$LCA_MODEL_PROVIDER"
           echo "Resolved SCRIPT_PATH=$SCRIPT_PATH"
-          if [ -z "$AWS_ROLE_TO_ASSUME" ]; then
-            echo "Repository variable AWS_ROLE_TO_ASSUME must be set before this workflow can assume an AWS role." >&2
+          echo "Resolved LCA_MODEL_PROVIDER=$MODEL_PROVIDER"
+          if [[ "$MODEL_PROVIDER" != "openai" && "$MODEL_PROVIDER" != "bedrock" ]]; then
+            echo "::error::LCA_MODEL_PROVIDER must be either openai or bedrock." >&2
             exit 1
           fi
-          if ! [[ "$AWS_ROLE_TO_ASSUME" =~ ^arn:(aws|aws-us-gov|aws-cn):iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$ ]]; then
-            echo "Repository variable AWS_ROLE_TO_ASSUME must be a valid IAM role ARN (format: arn:aws:iam::<12-digit-account-id>:role/<role-name-or-path>). Got: $AWS_ROLE_TO_ASSUME" >&2
-            exit 1
+          if [[ "$MODEL_PROVIDER" == "openai" ]]; then
+            if [ -z "$OPENAI_API_KEY" ]; then
+              echo "::error::Set the repository secret OPENAI_API_KEY before running with LCA_MODEL_PROVIDER=openai." >&2
+              exit 1
+            fi
+            if [ -z "$OPENAI_MODEL_ID" ]; then
+              echo "::error::OPENAI_MODEL_ID must not be empty." >&2
+              exit 1
+            fi
+          fi
+          if [[ "$MODEL_PROVIDER" == "bedrock" ]]; then
+            if [ -z "$AWS_ROLE_TO_ASSUME" ]; then
+              echo "::error::Set the repository variable AWS_ROLE_TO_ASSUME to the ARN of an IAM role that trusts GitHub OIDC." >&2
+              exit 1
+            fi
+            if [[ "$AWS_ROLE_TO_ASSUME" == *":oidc-provider/"* ]]; then
+              echo "::error::AWS_ROLE_TO_ASSUME contains an OIDC provider ARN, not an IAM role ARN. Create a role that trusts this provider and set the variable to that role's ARN. See README.md#aws-authentication-with-github-oidc." >&2
+              exit 1
+            fi
+            if ! [[ "$AWS_ROLE_TO_ASSUME" =~ ^arn:(aws|aws-us-gov|aws-cn):iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$ ]]; then
+              echo "::error::AWS_ROLE_TO_ASSUME must be an IAM role ARN, for example arn:aws:iam::123456789012:role/github-actions-bedrock." >&2
+              exit 1
+            fi
           fi
           python - <<'PY'
           import os
@@ -127,10 +144,32 @@ jobs:
           PY
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6.2.4
+        if: ${{ env.LCA_MODEL_PROVIDER == 'bedrock' }}
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
+          audience: ${{ startsWith(env.AWS_ROLE_TO_ASSUME, 'arn:aws-cn:') && 'sts.amazonaws.com.cn' || 'sts.amazonaws.com' }}
+          role-session-name: GitHubActions-${{ github.run_id }}-${{ github.run_attempt }}
+          unset-current-credentials: true
+          output-env-credentials: true
 
-      - name: Run deepagent against Bedrock
+      - name: Verify AWS identity
+        if: ${{ env.LCA_MODEL_PROVIDER == 'bedrock' }}
+        run: aws sts get-caller-identity
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: |
+          if [[ "$LCA_MODEL_PROVIDER" == "bedrock" ]]; then
+            uv sync --extra bedrock
+          else
+            uv sync
+          fi
+
+      - name: Run deepagent
         run: uv run python "$SCRIPT_PATH"
