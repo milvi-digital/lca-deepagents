@@ -26,12 +26,12 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_DEFAULT_REGION || 'us-east-2' }}
       AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
-      LCA_MODEL_PROVIDER: ${{ vars.LCA_MODEL_PROVIDER || 'openai' }}
+      LCA_MODEL_PROVIDER: ${{ vars.LCA_MODEL_PROVIDER || 'bedrock' }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_MODEL_ID: ${{ vars.OPENAI_MODEL_ID || 'gpt-5.5' }}
       OPENAI_STRONG_MODEL_ID: ${{ vars.OPENAI_STRONG_MODEL_ID || vars.OPENAI_MODEL_ID || 'gpt-5.5' }}
-      BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-haiku-20241022-v1:0' }}
-      BEDROCK_STRONG_MODEL_ID: ${{ vars.BEDROCK_STRONG_MODEL_ID || vars.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0' }}
+      BEDROCK_MODEL_ID: ${{ vars.BEDROCK_MODEL_ID || 'us.openai.gpt-5.6-sol' }}
+      BEDROCK_STRONG_MODEL_ID: ${{ vars.BEDROCK_STRONG_MODEL_ID || vars.BEDROCK_MODEL_ID || 'us.openai.gpt-5.6-sol' }}
       LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
       LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT || 'lca-deepagents' }}
       LANGSMITH_TRACING: ${{ vars.LANGSMITH_TRACING || 'false' }}
