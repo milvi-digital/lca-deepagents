@@ -10,24 +10,28 @@ Course materials for the [Deep Agents](https://academy.langchain.com/courses/fou
 
 ## GitHub Actions agent run
 
-The [`Deploy Bedrock Agent`](.github/workflows/deploy-bedrock-agent.yml) workflow runs a Python lesson agent under `python/`. It defaults to OpenAI GPT-5.5 and can also run against AWS Bedrock when `LCA_MODEL_PROVIDER=bedrock`.
+The [`Deploy Bedrock Agent`](.github/workflows/deploy-bedrock-agent.yml) workflow runs a Python lesson agent under `python/`. It defaults to AWS Bedrock with the OpenAI `us.openai.gpt-5.6-sol` inference profile.
 By default it runs `m1/m1.5_homework_filled.py`.
 `BEDROCK_AGENT_SCRIPT` (or the manual `script_path` input) must point to an existing `.py` file under `python/`; both `m1/m1.5_homework_filled.py` and `python/m1/m1.5_homework_filled.py` are accepted.
 
-Configure these repository settings before using the default GPT-5.5 path:
+Configure these repository settings before using the default Bedrock/OpenAI path:
 
 | Type | Name | Value |
 | --- | --- | --- |
-| Secret (required) | `OPENAI_API_KEY` | API key used by `langchain-openai` |
-| Variable | `LCA_MODEL_PROVIDER` | Defaults to `openai`; set only if overriding |
+| Variable | `AWS_ROLE_TO_ASSUME` | The IAM role ARN used for GitHub OIDC |
+| Variable | `AWS_REGION` | Defaults to `us-east-2` |
+| Variable | `LCA_MODEL_PROVIDER` | Defaults to `bedrock`; set to `openai` only to use the OpenAI API directly |
 | Variable | `OPENAI_MODEL_ID` | Defaults to `gpt-5.5` |
 | Variable | `OPENAI_STRONG_MODEL_ID` | Defaults to `OPENAI_MODEL_ID`, then `gpt-5.5` |
+| Variable | `BEDROCK_MODEL_ID` | Defaults to `us.openai.gpt-5.6-sol` |
+| Variable | `BEDROCK_STRONG_MODEL_ID` | Defaults to `BEDROCK_MODEL_ID`, then `us.openai.gpt-5.6-sol` |
+| Secret | `OPENAI_API_KEY` | Required only when `LCA_MODEL_PROVIDER=openai` |
 | Variable | `BEDROCK_AGENT_SCRIPT` | Fallback script path when the dispatch input is empty |
 | Secret | `LANGSMITH_API_KEY` | Needed if LangSmith tracing is enabled |
 | Variable | `LANGSMITH_TRACING` | Defaults to `false`; set to `true` to enable tracing |
 | Variable | `LANGSMITH_PROJECT` | Defaults to `lca-deepagents` |
 
-Do not set AWS variables for the default OpenAI/GPT-5.5 path. AWS OIDC is only used when `LCA_MODEL_PROVIDER=bedrock`.
+The default path does not use an OpenAI API key. It authenticates to AWS with OIDC and invokes OpenAI through Bedrock. Direct OpenAI API usage remains available by setting `LCA_MODEL_PROVIDER=openai`.
 
 ### AWS authentication with GitHub OIDC
 
@@ -85,7 +89,7 @@ The example only permits runs from `main`. Select `main` when dispatching the wo
 
 Attach a separate permissions policy to the role. The trust policy above only controls who can assume the role; it does not authorize model calls.
 
-For direct invocation of the workflow's default foundation models in `us-east-1`, this is an example scoped policy:
+For the workflow's default `us.openai.gpt-5.6-sol` inference profile in `us-east-2`, this is an example scoped policy:
 
 ```json
 {
@@ -95,18 +99,21 @@ For direct invocation of the workflow's default foundation models in `us-east-1`
       "Effect": "Allow",
       "Action": [
         "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream"
+        "bedrock:InvokeModelWithResponseStream",
+        "bedrock:GetInferenceProfile"
       ],
       "Resource": [
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
+        "arn:aws:bedrock:us-east-2:123456789012:inference-profile/us.openai.gpt-5.6-sol",
+        "arn:aws:bedrock:us-east-1::foundation-model/openai.gpt-5.6-sol",
+        "arn:aws:bedrock:us-east-2::foundation-model/openai.gpt-5.6-sol",
+        "arn:aws:bedrock:us-west-2::foundation-model/openai.gpt-5.6-sol"
       ]
     }
   ]
 }
 ```
 
-Adjust the region and model resources to match your selected models and their availability in your AWS account. Foundation-model ARNs intentionally have an empty account-ID segment. If you use inference profiles instead, also authorize the relevant profile and underlying model resources, including destination regions for cross-region inference, and grant `bedrock:GetInferenceProfile` on the profile. Complete any model-provider access prerequisites separately; successful OIDC authentication alone does not enable access to every model.
+Replace `123456789012` with your AWS account ID. Foundation-model ARNs intentionally have an empty account-ID segment. Adjust the region and model resources to match your selected models and their availability in your AWS account. If you use a different inference profile, also authorize that profile and its underlying model resources, including destination regions for cross-region inference, and grant `bedrock:GetInferenceProfile` on the profile. Complete any model-provider access prerequisites separately; successful OIDC authentication alone does not enable access to every model.
 
 #### 4. Configure GitHub and run the workflow
 
@@ -115,9 +122,9 @@ Open **Settings > Secrets and variables > Actions** in this repository:
 | Type | Name | Value |
 | --- | --- | --- |
 | Variable (required) | `AWS_ROLE_TO_ASSUME` | The role ARN, e.g. `arn:aws:iam::123456789012:role/github-actions-bedrock` |
-| Variable | `AWS_REGION` | Your Bedrock region; falls back to `AWS_DEFAULT_REGION`, then `us-east-1` |
-| Variable | `BEDROCK_MODEL_ID` | Model ID or inference profile used by the agent; defaults to Claude 3.5 Haiku |
-| Variable | `BEDROCK_STRONG_MODEL_ID` | Strong-model override; falls back to `BEDROCK_MODEL_ID`, then Claude 3.5 Sonnet |
+| Variable | `AWS_REGION` | Your Bedrock region; falls back to `AWS_DEFAULT_REGION`, then `us-east-2` |
+| Variable | `BEDROCK_MODEL_ID` | Model ID or inference profile used by the agent; defaults to `us.openai.gpt-5.6-sol` |
+| Variable | `BEDROCK_STRONG_MODEL_ID` | Strong-model override; falls back to `BEDROCK_MODEL_ID`, then `us.openai.gpt-5.6-sol` |
 | Variable | `BEDROCK_AGENT_SCRIPT` | Fallback script path when the dispatch input is empty |
 | Secret | `LANGSMITH_API_KEY` | Needed if LangSmith tracing is enabled |
 | Variable | `LANGSMITH_TRACING` | Defaults to `false`; set to `true` to enable tracing |

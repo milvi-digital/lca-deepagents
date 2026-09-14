@@ -45,7 +45,9 @@ def _init_bedrock_model(
     if not model_id and use_default_model_id:
         model_id = os.getenv("BEDROCK_MODEL_ID")
     model_id = model_id or fallback_model_id
-    return ChatBedrockConverse(model_id=model_id, region_name=region_name)
+    return ChatBedrockConverse(
+        model_id=model_id, region_name=region_name, disable_streaming=False
+    )
 
 # ═══ Default Models ══════════════════════════════════════════════════════════
 # Workshop default: Anthropic claude-haiku-4-5, fast and cost-effective.
@@ -59,17 +61,17 @@ def _init_bedrock_model(
 # To switch the whole repo to AWS Bedrock without editing lesson files, set:
 #   LCA_MODEL_PROVIDER=bedrock
 #   AWS_REGION=...
-#   BEDROCK_MODEL_ID=anthropic.claude-3-5-haiku-20241022-v1:0
-#   BEDROCK_STRONG_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+#   BEDROCK_MODEL_ID=us.openai.gpt-5.6-sol
+#   BEDROCK_STRONG_MODEL_ID=us.openai.gpt-5.6-sol
 provider = os.getenv("LCA_MODEL_PROVIDER", "").lower()
 
 if provider == "bedrock":
     model = _init_bedrock_model(
-        "BEDROCK_MODEL_ID", "anthropic.claude-3-5-haiku-20241022-v1:0"
+        "BEDROCK_MODEL_ID", "us.openai.gpt-5.6-sol"
     )
     strong_model = _init_bedrock_model(
         "BEDROCK_STRONG_MODEL_ID",
-        "anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "us.openai.gpt-5.6-sol",
         use_default_model_id=False,
     )
 elif provider == "openai":
@@ -139,7 +141,7 @@ else:
 #
 # from langchain_aws import ChatBedrockConverse
 # model = ChatBedrockConverse(
-#     model_id="anthropic.claude-3-5-haiku-20241022-v1:0",
+#     model_id="us.openai.gpt-5.6-sol",
 #     region_name=os.environ["AWS_REGION"],
 # )
 
