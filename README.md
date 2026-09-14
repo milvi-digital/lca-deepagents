@@ -11,7 +11,8 @@ Course materials for the [Deep Agents](https://academy.langchain.com/courses/fou
 ## GitHub Actions agent run
 
 The [`Deploy Bedrock Agent`](.github/workflows/deploy-bedrock-agent.yml) workflow runs a Python lesson agent under `python/`. It defaults to OpenAI GPT-5.5 and can also run against AWS Bedrock when `LCA_MODEL_PROVIDER=bedrock`.
-`BEDROCK_AGENT_SCRIPT` (or the manual `script_path` input) must be a filesystem path to a `.py` file relative to `python/`.
+By default it runs `m1/m1.5_homework_filled.py`.
+`BEDROCK_AGENT_SCRIPT` (or the manual `script_path` input) must point to an existing `.py` file under `python/`; both `m1/m1.5_homework_filled.py` and `python/m1/m1.5_homework_filled.py` are accepted.
 
 Configure these repository settings before using the default GPT-5.5 path:
 
@@ -126,7 +127,7 @@ Do not add `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` secrets for this workf
 
 `AWS_ROLE_TO_ASSUME` must contain `arn:aws:iam::<account-id>:role/<role-name>`, **not** `arn:aws:iam::<account-id>:oidc-provider/token.actions.githubusercontent.com`. The provider ARN belongs in the role's trust policy, not in this repository variable.
 
-Go to **Actions > Deploy Bedrock Agent > Run workflow**, select **main**, and set `script_path` if needed. Its default is `m1/m1.5_homework.py`, which takes precedence over `BEDROCK_AGENT_SCRIPT` unless the input is cleared. Running the agent makes Bedrock model calls and can incur charges; the workflow does not provision an AWS-hosted agent service.
+Go to **Actions > Deploy Bedrock Agent > Run workflow**, select **main**, and set `script_path` if needed. Its default is `m1/m1.5_homework_filled.py`, which takes precedence over `BEDROCK_AGENT_SCRIPT` unless the input is cleared. Running the agent with Bedrock makes Bedrock model calls and can incur charges; the workflow does not provision an AWS-hosted agent service.
 
 ### Authentication troubleshooting
 
